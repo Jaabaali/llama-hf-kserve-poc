@@ -1,6 +1,7 @@
 import kserve
 from transformers import AutoTokenizer, pipeline
 import torch
+import os
 
 import logging
 
@@ -12,20 +13,23 @@ transformers_logger = logging.getLogger("transformers")
 transformers_logger.setLevel(logging.INFO)
 
 class KServeLlamaModel(kserve.Model):
-
-    def __init__(self, name: str):
+    def __init__(self, name: str, token: str, model: str):
         super().__init__(name)
         self.name = name
+        self.model = model
+        self.token = token
         self.ready = False
 
     def load(self):
-        model_name = "meta-llama/Llama-2-7b-chat-hf"
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        # model_name = "meta-llama/Llama-2-7b-chat-hf"
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model, token=self.token)
+
         self.pipeline = pipeline(
             "text-generation",
-            model=model_name,
+            model=self.model,
             torch_dtype=torch.float16,
             device_map="auto",
+            token=self.token,
         )
         self.ready = True
 
@@ -42,7 +46,9 @@ class KServeLlamaModel(kserve.Model):
         return {"generated_text": sequences[0]['generated_text']}
 
 if __name__ == "__main__":
-    model = KServeLlamaModel("llama-chat")
+    token = os.getenv("TOKEN")
+    model = os.getenv("MODEL")
+    model = KServeLlamaModel(name="llama-chat", token=str(token), model=str(model))
     model.load()
-    server = kserve.ModelServer(workers=3)
+    server = kserve.ModelServer()
     server.start([model])

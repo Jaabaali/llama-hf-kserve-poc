@@ -7,11 +7,18 @@ RUN apt-get update -y && apt-get install -y \
   git \
   build-essential
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Los_Angeles
+
 RUN apt-get update && apt-get install -y python3.10
+
+RUN apt-get install -y python3-pip
 
 # Install KServe and its dependencies
 RUN pip install kserve transformers torch \
   --extra-index-url https://download.pytorch.org/whl/cu123
+
+RUN pip install accelerate
 
 # Set the working directory in the container
 WORKDIR /app
